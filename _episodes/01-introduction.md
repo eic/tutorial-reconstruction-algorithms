@@ -9,9 +9,9 @@ objectives:
 keypoints:
 ---
 
-## Example: simple electron ID with $$E/p$$ cut
+## Example: simple electron ID with $E/p$ cut
 
-One key ingredient in electron ID is the ratio of the energy deposited in the calorimeter ($$E$$) to the momentum of the particle track ($$p$$).  For electrons, this should be close to 1.  We want to implement a simple electron ID algorithm by identifying particles that satisfy $$0.9 < E/p < 1.2$$.
+One key ingredient in electron ID is the ratio of the energy deposited in the calorimeter ($E$) to the momentum of the particle track ($p$).  For electrons, this should be close to 1.  We want to implement a simple electron ID algorithm by identifying particles that satisfy $0.9 < E/p < 1.2$.
 
 ### What information is required?
 
