@@ -31,11 +31,11 @@ namespace eicrecon {
         // (e.g. manipulate existing objects to create new objects)
         std::unique_ptr<MyReturnDataType> execute();
         
-        \\ Any additional public members go here 
+        // Any additional public members go here 
 
     private:
         std::shared_ptr<spdlog::logger> m_log;
-        \\ any additional private members go here
+        // any additional private members go here
 
     };
 } // namespace eicrecon
@@ -86,10 +86,10 @@ namespace eicrecon {
         }
 
     private:
-        std::shared_ptr<spdlog::logger> m_log;  \\ pointer of logger
-        double m_electron{0.000510998928};      \\ electron mass
-        double min_energy_over_momentum{0.9};   \\ default minimum E/p
-        double max_energy_over_momentum{1.2};   \\ default maximum E/p
+        std::shared_ptr<spdlog::logger> m_log;  // pointer of logger
+        double m_electron{0.000510998928};      // electron mass
+        double min_energy_over_momentum{0.9};   // default minimum E/p
+        double max_energy_over_momentum{1.2};   // default maximum E/p
 
     };
 } // namespace eicrecon
@@ -177,10 +177,7 @@ namespace eicrecon {
 
 ## Create reconstructed electron factory
 
-Next, we will create a factory to call our algorithm and save the output.  Our algorithm requires reconstructed tracks, calorimeter clusters, and associations between the two.  
-As previously stated, the current implementation of the simple electron ID uses the truth association between tracks and clusters (association using matching between clusters and track projections will be implemented later).  
-Thus, we need two sets of associations: association between the truth particle and the reconstructed charged particle, and association between the truth particle and the calorimeter cluster.
-Obviously, we will not create these objects from scratch.  Rather, we will get them from the factories (and underlying algorithms) implemented to create these objects.
+Next, we will create a factory to call our algorithm and save the output.  Our algorithm requires reconstructed tracks, calorimeter clusters, and associations between the two.  As previously stated, the current implementation of the simple electron ID uses the truth association between tracks and clusters (association using matching between clusters and track projections will be implemented later).  Thus, we need two sets of associations: association between the truth particle and the reconstructed charged particle, and association between the truth particle and the calorimeter cluster.  Obviously, we will not create these objects from scratch.  Rather, we will get them from the factories (and underlying algorithms) implemented to create these objects.
 
 ### Get tracks
 
@@ -194,8 +191,7 @@ The truth and reconstructed particle associations are stored as a `edm4eic::MCRe
 
 `auto rc_particles_assoc = static_cast<const edm4eic::MCRecoParticleAssociationCollection*>(event->GetCollectionBase("ReconstructedChargedParticleAssociations"));`
 
-Associations between truth particles and calorimeter clusters are stored as a `MCRecoClusterParticleAssociationCollection`.  There is a separate collection for each calorimeter.  
-For example, the collection for the backward endcap electromagnetic calorimeter is accessed by:
+Associations between truth particles and calorimeter clusters are stored as a `MCRecoClusterParticleAssociationCollection`.  There is a separate collection for each calorimeter.  For example, the collection for the backward endcap electromagnetic calorimeter is accessed by:
 
 `mc_cluster_assoc = static_cast<const edm4eic::MCRecoClusterParticleAssociationCollection*>(event->GetCollectionBase("EcalEndcapNClusterAssociations"));`
 
