@@ -181,23 +181,27 @@ Next, we will create a factory to call our algorithm and save the output.  Our a
 
 ### Get tracks
 
-The reconstructed charged particle tracks are stored as a `edm4eic::ReconstructedParticleCollection`.  The collection is accessed by:
+The reconstructed charged particle tracks are stored as `edm4eic::ReconstructedParticleCollection`.  The collection is accessed by:
  
 `auto rc_particles = static_cast<const edm4eic::ReconstructedParticleCollection*>(event->GetCollectionBase("ReconstructedChargedParticles"));`
 
 ### Get associations
 
-The truth and reconstructed particle associations are stored as a `edm4eic::MCRecoParticleAssociationCollection`.  The collection is accessed by:
+The truth and reconstructed particle associations are stored as `edm4eic::MCRecoParticleAssociationCollection`.  The collection is accessed by:
 
 `auto rc_particles_assoc = static_cast<const edm4eic::MCRecoParticleAssociationCollection*>(event->GetCollectionBase("ReconstructedChargedParticleAssociations"));`
 
-Associations between truth particles and calorimeter clusters are stored as a `MCRecoClusterParticleAssociationCollection`.  There is a separate collection for each calorimeter.  For example, the collection for the backward endcap electromagnetic calorimeter is accessed by:
+Associations between truth particles and calorimeter clusters are stored as `MCRecoClusterParticleAssociationCollection`.  There is a separate collection for each calorimeter.  For example, the collection for the backward endcap electromagnetic calorimeter is accessed by:
 
-`mc_cluster_assoc = static_cast<const edm4eic::MCRecoClusterParticleAssociationCollection*>(event->GetCollectionBase("EcalEndcapNClusterAssociations"));`
+`auto mc_cluster_assoc = static_cast<const edm4eic::MCRecoClusterParticleAssociationCollection*>(event->GetCollectionBase("EcalEndcapNClusterAssociations"));`
 
 ### Get clusters
 
-We access the calorimeter clusters themselves through the association:
+The calorimeter clusters are stored as `edm4eic::ClusterCollection`.  As with the associations, there is a separate collection for each calorimeter.  For example, the collection for the backward endcap electromagnetic calorimeter is accessed by:
+
+`auto clust = static_cast<const edm4eic::ClusterCollection*>(event->GetCollectionBase("EcalEndcapNClusters"));` 
+
+However, we can also access the calorimeter clusters directly from the association:
 
 `auto clust = mc_cluster_assoc.getRec();`
 
