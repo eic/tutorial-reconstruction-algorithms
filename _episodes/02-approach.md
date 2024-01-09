@@ -10,6 +10,84 @@ keypoints:
 
 ## Working with PODIO objects
 
+Our data model is in a library/namespace/repository called `edm4eic`, and it is built on top of `edm4hep`, a data model designed to capture commonalities across HEP experiments. `edm4eic` is implemented using PODIO, which is a toolkit for generating the data model classes from a specification written in YAML. Here is a very simple example of a PODIO specification:
+
+```yaml
+options :
+  # should getters / setters be prefixed with get / set?
+  getSyntax: False
+  # should POD members be exposed with getters/setters in classes that have them as members?
+  exposePODMembers: True
+  includeSubfolder: True
+
+datatypes :
+  ExampleHit :
+    Description : "Hit"
+    Author : "B. Hegner"
+    Members:
+      - unsigned long long cellID      // cellID
+      - double x      // x-coordinate
+      - double y      // y-coordinate
+      - double z      // z-coordinate
+      - double energy // measured energy deposit
+
+  ExampleCluster :
+    Description : "Cluster"
+    Author : "N. Brei"
+    Members:
+      - double energy // cluster energy
+    OneToManyRelations:
+      - ExampleHit Hits // hits contained in the cluster
+      - ExampleCluster Clusters // sub clusters used to create this cluster
+```
+
+PODIO will then generate for us the following classes:
+```
+DatamodelDefinition.h ExampleCluster.h ExampleClusterCollection.h ExampleClusterCollectionData.h ExampleClusterData.h ExampleClusterObj.h ExampleHit.h ExampleHitCollection.h ExampleHitCollectionData.h ExampleHitData.h ExampleHitObj.h MutableExampleHit.h MutableExampleCluster.h
+```
+
+As you can see, PODIO has a lot of moving pieces. Why? 
+
+1. PODIO adds a separate layer for managing memory in a way which is more consistent with Python and other garbage-collected languages. The user only has to work with values, no explicit allocations or deletions.
+2. PODIO separates the data's memory layout from its accessors
+3. PODIO enforces immutability directly in the object model
+4. PODIO has sophisticated (though fragile!) mechanisms for tracking object references
+
+These design principles in principle should eliminate entire classes of bugs. However, there are still subtleties when using PODIO that can lead to leaks, crashes, or corrupted references. Luckily, the correct usage pattern is quite simple:
+
+```c++
+auto hits = std::make_unique<ExampleHitCollection>();
+
+hits->push_back(ExampleHit(22, 0.0, 0.0, 0.0, 0.001));
+
+MutableExampleHit hit;
+hit.x(0.0);
+hit.energy(0.001);
+// ...
+hits->push_back(hit);
+
+MutableExampleCluster cluster;
+cluster.addHits(hit);
+
+// Safety tip: Add object to a collection BEFORE creating an association to it
+
+auto clusters = std::make_unique<ExampleClusterCollection>();
+clusters->push_back(cluster);
+
+auto subset_clusters = std::make_unique<ExampleClusterCollection>();
+subset_clusters->setSubsetCollection(true);
+subset_clusters->push_back(cluster);
+
+// Safety tip: Every PODIO object is owned by exactly one collection.
+// If you want to put the object in other collections, those collections need to 
+// be designated as "subset collections", which means that they don't own their contents. 
+```
+
+Note that when you write a factory, its inputs will be `const ExampleHitCollection*`, which is *immmutable*. 
+Its output will be `std::unique_ptr<ExampleHitCollection>`, which is still mutable but transfers its ownership to JANA, 
+which adds the collection to a podio `Frame`. From that point on, the collection is immutable and owned by the `Frame`.
+JANA will create and destroy `Frame`s internally. 
+
 
 ## Algorithms vs. factories
 
@@ -74,13 +152,22 @@ Of course, for brevity, the user could simply write this instead:
 m_particles_out() = smearing_algo->execute( m_particles_in() );
 ```
 
-
 As you have just seen, PodioOutputs are very analogous to PodioInputs. 
 
-Parameters are handled slightly differently. JOmniFactory provides a `Parameter` class template which can hold , but in EICrecon we use Config structs
-// TODO: Discuss variadic Inputs
-// TODO: Discuss Parameters
-// TODO: Discuss Services
+Parameters are handled slightly differently. JOmniFactory provides a `Parameter` class template which can hold its own value, but in EICrecon we prefer to use Config structs. Thus JOmniFactory provides `ParameterRef`, which stores a reference into the Config object. 
+
+```c++
+    ParameterRef<double> m_samplingFraction {this, "samplingFraction", config().sampFrac};
+    ParameterRef<std::string> m_energyWeight {this, "energyWeight", config().energyWeight};
+```
+
+Services are singletons that provide access to resources such as loggers, geometry, magnetic field maps, etc. Services need to be thread-safe because they are shared by different threads. The most relevant service right now is `DD4hep_service`:
+
+```c++
+    Service<DD4hep_service> m_geoSvc {this};
+```
+
+Oftentimes we want to retrieve a resource from a Service and refresh it any time the run number changes. OmniFactory provides `Resource` for this purpose.
 
 
 ### Callbacks
@@ -114,7 +201,7 @@ JANA plugins are a mechanism for controlling which parts of `EICrecon` get compi
 
 Plugins were also designed so that users could integrate their analyses directly into reconstruction while keeping them independent and optional. This pattern is heavily used in the GlueX experiment and recommended in the tutorials on JANA's own documentation. In EICrecon, we set up separate plugins for each detector and each benchmark, but not for each analysis. We strongly recommend following the advice given in the analysis tutorials instead. The instructions for adding a new plugin are [here](https://eic.github.io/tutorial-jana2/03-end-user-plugin/index.html).
 
-The EICrecon plugins are organized as follows. Under `src/detectors` we have subdirectories for each individual detector, and each of them corresponds to one plugin that adds the detector's factory generators. Benchmarks are analogous. If an algorithm/factory will only ever be used in that one context, it can live there; otherwise, and preferably, the corresponding algorithm lives under `src/algorithms` and the corresponding factory lives under `src/factories`. There is also a `src/global/{pid,reco,tracking}` and some factories live there. TODO: Why both `src/global` and `src/factories`?
+The EICrecon plugins are organized as follows. Under `src/detectors` we have subdirectories for each individual detector, and each of them corresponds to one plugin that adds the detector's factory generators. Benchmarks are analogous. If an algorithm/factory will only ever be used in that one context, it can live there; otherwise, and preferably, the corresponding algorithm lives under `src/algorithms` and the corresponding factory lives under `src/factories`. 
 
 Once you figure out which plugin your algorithm naturally belongs to, find its `InitPlugin()` method. By convention this lives in a `.cc` file with the same name as the plugin itself. This is where you will add your factory generator.
 
@@ -147,6 +234,27 @@ In this example, "GeneratedParticles" is the factory instance's unique prefix, `
 
 - When assigning names to collections and `JOmniFactory` prefixes, uniqueness is extremely important! JANA will throw an error if it detects a naming collision, but because of the dynamic plugin loading, some collisions can't be detected. DO NOT use the same output collection name or prefix in different plugins, and DO NOT rely the plugin loading order to make sure you ran the "correct" factory! To swap out different versions of a factory, change or override the *input* collection name on the factories and processors downstream.
 
+If you use a Config object for your parameters, it would be passed in like so:
+
+```c++
+        app->Add(new JOmniFactoryGeneratorT<CalorimeterHitReco_factory>(
+          "B0ECalRecHits", {"B0ECalRawHits"}, {"B0ECalRecHits"},
+          {
+            .capADC = 16384,
+            .dyRangeADC = 20. * dd4hep::GeV,
+            .pedMeanADC = 100,
+            .pedSigmaADC = 1,
+            .resolutionTDC = 1e-11,
+            .thresholdFactor = 0.0,
+            .thresholdValue = 0.0,
+            .sampFrac = 0.998,
+            .readout = "B0ECalHits",
+            .sectorField = "sector",
+          },
+          app
+        ));
+```
+
 
 ### How do I get my factory to run, and how do I get my output?
 
@@ -156,27 +264,48 @@ In this example, "GeneratedParticles" is the factory instance's unique prefix, `
 eicrecon -Ppodio:output_include_collections=MyNewCollectionName1,MyNewCollectionName2 in.root
 ```
 Note that this *appends* our collections to the list of collections that get written.
-TODO: Look this up
 
 #### To permanently include your factory's outputs in the output file:
-```bash
-eicrecon -Ppodio:output_include_collections=MyNewCollectionName in.root
+
+Add your collection name to `output_include_collections` in src/services/io/podio/JEventProcessorPODIO.cc:44
+```c++
+    std::vector<std::string> output_include_collections={
+            "EventHeader",
+            "MCParticles",
+            "CentralTrackingRecHits",
+            "CentralTrackSeedingResults",
+            "CentralTrackerMeasurements",
+            //...
 ```
-TODO: Look this up
 
 #### To temporarily use your factory's outputs in another factory:
-```bash
-eicrecon -Ppodio:output_include_collections=MyNewCollectionName in.root
+
+Suppose our factory is configured like so:
+```c++
+    app->Add(new JOmniFactoryGeneratorT<BasicTestAlg>(
+        "FunTest", {"MyHits"}, {"MyClusters"}, 
+        {
+          .threshold = 6.1,
+          .bucket_count = 22
+        },
+        app);
 ```
-TODO: Look this up
+We can override it's `threshold` parameter on the command line like so:
+```bash
+eicrecon -PFunTest:threshold=12.0 in.root
+```
 
 #### To permanently use your factory's outputs in another factory:
-```bash
-eicrecon -Ppodio:output_include_collections=MyNewCollectionName in.root
+
+Change the collection name in the `OmniFactoryGeneratorT` or `JChainMultifactoryGeneratorT`:
+```c++
+    app->Add(new JOmniFactoryGeneratorT<MC2SmearedParticle_factory>(
+            "GeneratedParticles",
+            {"MCParticlesSmeared"},            // <== Used to be "MCParticles"
+            {"GeneratedParticles"},
+            app
+            ));
 ```
-TODO: Look this up
-
-
 
 ## What is the future of OmniFactories and Algorithms?
 
