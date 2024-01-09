@@ -1,7 +1,7 @@
 ---
-title: "Implementation"
-teaching: 10
-exercises: 25
+title: "Implementation: algorithm and factory for electron ID example"
+teaching: 25
+exercises: 15
 questions:
 objectives:
 - "Implement a reconstruction algorithm and factory"

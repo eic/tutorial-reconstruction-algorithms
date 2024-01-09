@@ -1,5 +1,5 @@
 ---
-title: "Introduction"
+title: "Introduction: EICrecon algorithms for physics analysis"
 teaching: 5
 exercises: 0
 questions:

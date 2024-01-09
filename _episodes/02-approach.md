@@ -1,6 +1,6 @@
 ---
-title: "Approach"
-teaching: 10
+title: "Approach: PODIO objects, algorithms, and factories"
+teaching: 15
 exercises: 0
 questions:
 objectives:
