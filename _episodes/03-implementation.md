@@ -58,11 +58,12 @@ Let's look at the algorithm header from our example.
 #include <memory>
 #include <vector>
 
+#include "ElectronReconstructionConfig.h"
+#include "algorithms/interfaces/WithPodConfig.h"
 
 namespace eicrecon {
 
-    class ElectronReconstruction {
-
+    class ElectronReconstruction : public WithPodConfig<ElectronReconstructionConfig>{
     public:
 
         // Initialization will set the pointer of the logger
@@ -79,24 +80,28 @@ namespace eicrecon {
         // Could overload execute here to, for instance, use track projections 
         // for track-cluster association (instead of truth information)
         
-        // Function to set E/p cuts
-        void setEnergyOverMomentumCut( double minEoP, double maxEoP ) { 
-            min_energy_over_momentum = minEoP; 
-            max_energy_over_momentum = maxEoP; 
-        }
-
     private:
-        std::shared_ptr<spdlog::logger> m_log;  // pointer of logger
+        std::shared_ptr<spdlog::logger> m_log;  // pointer to logger
         double m_electron{0.000510998928};      // electron mass
-        double min_energy_over_momentum{0.9};   // default minimum E/p
-        double max_energy_over_momentum{1.2};   // default maximum E/p
-
     };
 } // namespace eicrecon
 
 ~~~
 
-`src/algorithms/reco/ElectronReconstruction.cc`:
+Note that the algorithm's parameters are enclosed in a Config object which lives at `src/algorithms/reco/ElectronReconstructionConfig.h` 
+and can be accessed via the protected member variable `m_cfg`.
+
+```c++
+struct ElectronReconstructionConfig {
+
+    double min_energy_over_momentum = 0.9;
+    double max_energy_over_momentum = 1.2;
+
+};
+```
+
+
+The algorithm itself lives at `src/algorithms/reco/ElectronReconstruction.cc`:
 
 ~~~ c++
 
@@ -156,7 +161,7 @@ namespace eicrecon {
               m_log->trace( "ReconstructedParticle: Energy={} GeV, p={} GeV, E/p = {} for PDG (from truth): {}", clu.getEnergy(), edm4hep::utils::magnitude(reco_part.getMomentum()), EoverP, sim.getPDG() );
 
               // Apply the E/p cut here to select electons
-              if ( EoverP >= min_energy_over_momentum && EoverP <= max_energy_over_momentum ) {
+              if ( EoverP >= m_cfg.min_energy_over_momentum && EoverP <= m_cfg.max_energy_over_momentum ) {
                 out_electrons->push_back(reco_part.clone());
               }
 
@@ -193,7 +198,7 @@ Next, we will create a factory to call our algorithm and save the output.  Our a
 
 namespace eicrecon {
 
-class ReconstructedElectrons_factory : public JOmniFactory<ReconstructedElectrons_factory> {
+class ReconstructedElectrons_factory : public JOmniFactory<ReconstructedElectrons_factory, ElectronReconstructionConfig> {
 private:
 
     // Underlying algorithm
@@ -209,9 +214,9 @@ private:
     // Declare outputs
     PodioOutput<edm4eic::ReconstructedParticle> m_out_reco_particles {this};
 
-    // Declare parameters here, e.g.
-    // ParameterRef<double> m_samplingFraction {this, "samplingFraction", config().sampFrac};
-    // ParameterRef<std::string> m_energyWeight {this, "energyWeight", config().energyWeight};
+    // Declare parameters
+    ParameterRef<double> m_min_energy_over_momentum {this, "minEnergyOverMomentum", config().min_energy_over_momentum};
+    ParameterRef<double> m_max_energy_over_momentum {this, "maxEnergyOverMomentum", config().max_energy_over_momentum};
 
     // Declare services here, e.g.
     // Service<DD4hep_service> m_geoSvc {this};
@@ -223,8 +228,8 @@ public:
         // The logger, parameters, and services have all been fetched before this is called
         m_algo = std::make_unique<eicrecon::ElectronReconstruction>();
 
-        // If we had a config object, we'd apply it like so:
-        // m_algo->applyConfig(config());
+        // Pass config object to algorithm
+        m_algo->applyConfig(config());
 
         // If we needed geometry, we'd obtain it like so
         // m_algo->init(m_geoSvc().detector(), m_geoSvc().converter(), logger());
@@ -271,6 +276,7 @@ Next, we register this with the `reco` plugin in src/global/reco.cc:
         "EcalLumiSpecClusterAssociations",
         },
         {"ReconstructedElectrons"},
+        {},  // Override config values here
         app
     ));
 ```
