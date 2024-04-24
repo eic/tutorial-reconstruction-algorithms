@@ -1,12 +1,10 @@
 ---
 title: "Working with PODIO"
 teaching: 5
-exercises: 0
-questions:
+exercises: 1
 objectives:
 - "Gain familiarity working with PODIO collections"
 - "Understand PODIO subset collections"
-keypoints:
 ---
 
 ## Introduction to PODIO
@@ -95,4 +93,6 @@ Its output will be `std::unique_ptr<ExampleHitCollection>`, which is still mutab
 JANA2 will create and destroy `Frame`s internally. 
 
 
-
+> Exercise:
+> - Have your algorithm produce some (fake) output data!
+{: .challenge}

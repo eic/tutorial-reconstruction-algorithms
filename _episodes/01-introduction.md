@@ -1,12 +1,10 @@
 ---
-title: "Introduction: EICrecon algorithms for physics analysis"
+title: "Introduction"
 teaching: 5
 exercises: 0
-questions:
 objectives:
 - "Define physics goal of new reconstruction algorithm"
 - "Identify what information is needed to accomplish this goal"
-keypoints:
 ---
 
 ## Background

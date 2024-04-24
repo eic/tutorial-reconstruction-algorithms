@@ -1,14 +1,11 @@
 ---
 title: "Calling a factory"
 teaching: 10
-exercises: 0
-questions:
+exercises: 1
 objectives:
 - "Learn how to wire a factory using a factory generator"
-- "Learn why factories are lazy in JANA2"
 - "Learn how to call the factory as a once-off"
 - "Learn how to call the factory every time"
-keypoints:
 ---
 
 ## Wiring a factory using a factory generator
@@ -40,6 +37,9 @@ In this example, "GeneratedParticles" is the factory instance's unique tag, `{"M
 
 - When assigning names to collections and `JOmniFactory` prefixes, uniqueness is extremely important! JANA will throw an error if it detects a naming collision, but because of the dynamic plugin loading, some collisions can't be detected. DO NOT use the same output collection name or prefix in different plugins, and DO NOT rely the plugin loading order to make sure you ran the "correct" factory! To swap out different versions of a factory, change or override the *input* collection name on the factories and processors downstream.
 
+## Where to put factory generators
+
+Factory generators need to be added inside an `InitPlugin` for a particular plugin. If the factory generator is specific to one particular detector, it would go in that detector's plugin. Because electron reconstruction is not, the generator is set up in one of the plugins under `src/global`. Because this falls in the category of reconstruction, we put it in `src/global/reco/reco.cc`. 
 
 ## Calling the factory
 
@@ -83,4 +83,11 @@ Change the collection name in the `OmniFactoryGeneratorT` or `JChainMultifactory
             ));
 ```
 
+> Exercise:
+> - Create a JOmniFactoryGenerator for your ElectronReconstruction factory
+> - Give your factory's output collection a fun name
+> - Call your factory from the command line and verify that you see its logger output.
+> - Add it to the `JEventSourcePODIO::output_include_collections`, so that it gets called automatically.
+> - Experiment with multiple factory generators so you can have multiple instances of the same factory
+{: .challenge}
 

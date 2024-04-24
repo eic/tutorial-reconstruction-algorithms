@@ -2,10 +2,8 @@
 title: "Putting everything together"
 teaching: 5
 exercises: 0
-questions:
 objectives:
 - "Get the electron finder running end-to-end"
-keypoints:
 ---
 
 
@@ -93,7 +91,7 @@ public:
 } // namespace eicrecon
 
 ~~~
-Next, we register this with the `reco` plugin in src/global/reco.cc:
+Next, we register this with the `reco` plugin in src/global/reco/reco.cc:
 ```c++
     app->Add(new JOmniFactoryGeneratorT<ReconstructedElectrons_factory>(
         "ReconstructedElectrons",

@@ -1,14 +1,12 @@
 ---
 title: "Creating a factory"
 teaching: 10
-exercises: 0
-questions:
+exercises: 1
 objectives:
 - "Understand the basics of EICrecon's plugin structure"
 - "Understand where to put new factories"
 - "Understand which factory base class to use"
 - "Understand the JOmniFactory interface"
-keypoints:
 ---
 
 ## Algorithms and Factories
@@ -77,7 +75,48 @@ These are the callbacks you'll need to implement:
 
 Note that unlike earlier factory base classes, JOmniFactory uses the [Curiously Recurring Template Pattern](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern) so that the callback methods aren't virtual. This lets the optimizer get rid of any performance penalty for the extra layer of indirection.
 
+Here is the full JOmniFactory code skeleton:
 
+```c++
+
+#pragma once
+#include "extensions/jana/JOmniFactory.h"
+
+class ReconstructedElectrons_factory : public JOmniFactory<ReconstructedElectrons_factory> {
+private:
+
+    // Declare inputs and outputs
+    // PodioInput<edm4hep::MCParticle> m_in_mc_particles {this, "MCParticles"};
+    // PodioOutput<edm4eic::ReconstructedParticle> m_out_reco_particles {this};
+
+    // Declare parameters
+    // ParameterRef<double> m_min_energy_over_momentum {this, "minEnergyOverMomentum", config().min_energy_over_momentum};
+ 
+    // Declare services
+    // Service<DD4hep_service> m_geoSvc {this};
+
+public:
+    void Configure() {
+        // This is called when the factory is instantiated.
+        // Use this callback to make sure the algorithm is configured.
+        // The logger, parameters, and services have all been fetched before this is called
+    }
+
+    void ChangeRun(int64_t run_number) {
+        // This is called whenever the run number is changed.
+        // Use this callback to retrieve state that is keyed off of run number.
+    }
+
+    void Process(int64_t run_number, uint64_t event_number) {
+        // This is called on every event.
+        // Use this callback to call your Algorithm using all inputs and outputs
+        // The inputs will have already been fetched for you at this point.
+        // m_algo->execute(...);
+
+        logger()->debug( "Event {}: Calling Process()", event_number );
+    }
+};
+```
 
 ## The JOmniFactory inputs and outputs
 
@@ -99,3 +138,11 @@ m_particles_out() = smearing_algo->execute( m_particles_in() );
 ```
 
 As you have just seen, PodioOutputs are very analogous to PodioInputs. 
+
+
+> Exercise:
+> - Create your own ElectronReconstruction factory from the code skeleton above
+> - Give your OmniFactory a single output collection
+> - Have its Process() method produce some log output
+> - Experiment with giving it different input collections
+{: .challenge}
