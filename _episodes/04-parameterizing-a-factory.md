@@ -20,13 +20,22 @@ Parameters are also handled using registered members. JOmniFactory provides a `P
 
 Parameters are fetched immediately before `Init()` is called, so you may access them from any of the callbacks like so:
 
-```
+```c++
+    void Process(int64_t run_number, uint64_t event_number) {
+        logger()->debug( "Event {}: samplingFraction = {}", event_number, m_samplingFraction() );
+    }
 
+```
+Because we are using ParameterRefs, we can also access the field the ref points to directly:
+```c++
+    void Process(int64_t run_number, uint64_t event_number) {
+        logger()->debug( "Event {}: samplingFraction = {}", event_number, config().sampFrac );
+    }
 ```
 
 ## Config objects
 
-We create a plain-old struct to hold our parameters.
+We create a plain-old struct to hold our parameters. For now this config struct can live in the same header file as our factory, although eventually it should belong with the algorithm instead.
 
 ```c++
 struct ReconstructedElectrons_config {
@@ -42,7 +51,6 @@ By passing it in to the JOmniFactory base class, we can make it automatically av
 class ReconstructedElectrons_factory : public JOmniFactory<ReconstructedElectrons_factory, ElectronReconstructionConfig> {
     ...
 }
-
 ```
 
 
@@ -57,7 +65,7 @@ If you use a Config object for your parameters, you can pass it in directly to t
           .threshold = 6.1,
           .bucket_count = 22
         },
-        app);
+        app));
 ```
 
 ## Overriding parameters via the command line
