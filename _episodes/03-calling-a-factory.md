@@ -46,17 +46,17 @@ Factory generators need to be added inside an `InitPlugin` for a particular plug
 
 #### To temporarily include your factory's outputs in the output file
 
-On the command line, set the `podio:output_include_collections` parameter to include your collection names:
+On the command line, set the `podio:output_collections` parameter to include your collection names:
 
 ```bash
-eicrecon -Ppodio:output_include_collections=MyNewCollectionName1,MyNewCollectionName2 in.root
+eicrecon -Ppodio:output_collections=MyNewCollectionName1,MyNewCollectionName2 in.root
 ```
 
 #### To permanently include your factory's outputs in the output file:
 
-Add your collection name to the `output_include_collections` list in src/services/io/podio/JEventProcessorPODIO.cc:44
+Add your collection name to the `output_collections` list in src/services/io/podio/JEventProcessorPODIO.cc:44
 ```c++
-    std::vector<std::string> output_include_collections={
+    std::vector<std::string> output_collections={
             "EventHeader",
             "MCParticles",
             "CentralTrackingRecHits",
@@ -87,7 +87,7 @@ Change the collection name in the `OmniFactoryGeneratorT` or `JChainMultifactory
 > - Create a JOmniFactoryGenerator for your ElectronReconstruction factory
 > - Give your factory's output collection a fun name
 > - Call your factory from the command line and verify that you see its logger output.
-> - Add it to the `JEventSourcePODIO::output_include_collections`, so that it gets called automatically.
+> - Add it to the `JEventSourcePODIO::output_collections`, so that it gets called automatically.
 > - Experiment with multiple factory generators so you can have multiple instances of the same factory
 {: .challenge}
 
