@@ -63,8 +63,8 @@ Earlier factory base classes, such as JChainMultifactory, require users to do a 
 These are the callbacks you'll need to implement:
 ```c++
     void Configure();
-    void ChangeRun(int64_t run_number);
-    void Process(int64_t run_number, uint64_t event_number);
+    void ChangeRun(int32_t run_number);
+    void Process(int32_t run_number, uint64_t event_number);
 ```
 
 `Configure` is called once when the factory is instantiated. This is where the user should initialize the underlying Algorithm. JANA will have already fetched the services, configured the logger, and set the values of the `Config` struct, so all the user needs to do is pass these things to the Algorithm.
