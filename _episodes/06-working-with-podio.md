@@ -87,8 +87,8 @@ subset_clusters->push_back(cluster);
 ```
 
 
-Note that when you write a factory, its inputs will be `const ExampleHitCollection*`, which are *immmutable*. 
-Its output will be `std::unique_ptr<ExampleHitCollection>`, which is still mutable but will transfer its ownership to JANA2. JANA2 will add the collection to a podio `Frame`. From that point on, the collection is immutable and owned by the `Frame`.
+Note that when you write a factory, its inputs will be `const ExampleHitCollection*`, which are *immutable*.
+Its output is held by a `PodioOutput<ExampleHit>` member; calling `m_output()` returns a `std::unique_ptr<ExampleHitCollection>&` that the factory can mutate, and `m_output().get()` gives a raw mutable pointer that you can hand to your algorithm's `process()` method. After `Process()` returns, JOmniFactory transfers ownership of that collection to JANA2, which adds it to a podio `Frame`. From that point on, the collection is immutable and owned by the `Frame`.
 
 JANA2 will create and destroy `Frame`s internally. 
 

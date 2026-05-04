@@ -9,10 +9,9 @@ objectives:
 
 ## The final ReconstructedElectron factory
 
-Here is the final ReconstructedElectron factory. Our algorithm requires reconstructed tracks, calorimeter clusters, and associations between the two.  As previously stated, the current implementation of the simple electron ID uses the truth association between tracks and clusters (association using matching between clusters and track projections will be implemented later).  Thus, we need two sets of associations: association between the truth particle and the reconstructed charged particle, and association between the truth particle and the calorimeter cluster.  Obviously, we will not create these objects from scratch.  Rather, we will get them from the factories (and underlying algorithms) implemented to create these objects.
+Here is the final `ReconstructedElectrons_factory`. The current implementation in `main` is much simpler than the variadic-input version that was originally drafted: by the time we reach the reco stage, charged tracks have already been combined with calorimeter clusters into `edm4eic::ReconstructedParticle` objects (each carrying a `getClusters()` relation), so we only need to read that one collection and apply the E/p cut on it.
 
-
-`src/global/reco/ReconstructedElectrons_factory.h` in branch `nbrei_variadic_omnifactories`:
+`src/factories/reco/ReconstructedElectrons_factory.h`:
 
 ~~~ c++
 
@@ -22,94 +21,76 @@ Here is the final ReconstructedElectron factory. Our algorithm requires reconstr
 
 #include "algorithms/reco/ElectronReconstruction.h"
 
-
 namespace eicrecon {
 
-class ReconstructedElectrons_factory : public JOmniFactory<ReconstructedElectrons_factory, ElectronReconstructionConfig> {
+class ReconstructedElectrons_factory
+    : public JOmniFactory<ReconstructedElectrons_factory, ElectronReconstructionConfig> {
+public:
+  using AlgoT = eicrecon::ElectronReconstruction;
+
 private:
+  // Underlying algorithm
+  std::unique_ptr<AlgoT> m_algo;
 
-    // Underlying algorithm
-    std::unique_ptr<eicrecon::ElectronReconstruction> m_algo;
+  // Declare inputs
+  PodioInput<edm4eic::ReconstructedParticle> m_in_rc_particles{this, "ReconstructedParticles"};
 
-    // Declare inputs
-    PodioInput<edm4hep::MCParticle> m_in_mc_particles {this, "MCParticles"};
-    PodioInput<edm4eic::ReconstructedParticle> m_in_rc_particles {this, "ReconstructedChargedParticles"};
-    PodioInput<edm4eic::MCRecoParticleAssociation> m_in_rc_particles_assoc {this, "ReconstructedChargedParticleAssociations"};
+  // Declare outputs
+  PodioOutput<edm4eic::ReconstructedParticle> m_out_reco_particles{this};
 
-    VariadicPodioInput<edm4eic::MCRecoClusterParticleAssociation> m_in_clu_assoc {this};
-
-    // Declare outputs
-    PodioOutput<edm4eic::ReconstructedParticle> m_out_reco_particles {this};
-
-    // Declare parameters
-    ParameterRef<double> m_min_energy_over_momentum {this, "minEnergyOverMomentum", config().min_energy_over_momentum};
-    ParameterRef<double> m_max_energy_over_momentum {this, "maxEnergyOverMomentum", config().max_energy_over_momentum};
-
-    // Declare services here, e.g.
-    // Service<DD4hep_service> m_geoSvc {this};
+  // Declare parameters
+  ParameterRef<double> m_min_energy_over_momentum{this, "minEnergyOverMomentum",
+                                                  config().min_energy_over_momentum};
+  ParameterRef<double> m_max_energy_over_momentum{this, "maxEnergyOverMomentum",
+                                                  config().max_energy_over_momentum};
 
 public:
-    void Configure() {
-        // This is called when the factory is instantiated.
-        // Use this callback to make sure the algorithm is configured.
-        // The logger, parameters, and services have all been fetched before this is called
-        m_algo = std::make_unique<eicrecon::ElectronReconstruction>();
+  void Configure() {
+    // This is called when the factory is instantiated.
+    // Use this callback to make sure the algorithm is configured.
+    // The logger, parameters, and services have all been fetched before this is called
+    m_algo = std::make_unique<AlgoT>(GetPrefix());
+    m_algo->level(static_cast<algorithms::LogLevel>(logger()->level()));
 
-        // Pass config object to algorithm
-        m_algo->applyConfig(config());
+    // Pass config object to algorithm
+    m_algo->applyConfig(config());
 
-        // If we needed geometry, we'd obtain it like so
-        // m_algo->init(m_geoSvc().detector(), m_geoSvc().converter(), logger());
+    m_algo->init();
+  }
 
-        m_algo->init(logger());
-    }
+  void Process(int32_t /* run_number */, uint64_t /* event_number */) {
+    // This is called on every event.
+    // Use this callback to call your Algorithm using all inputs and outputs.
+    // The inputs will have already been fetched for you at this point.
+    m_algo->process({m_in_rc_particles()}, {m_out_reco_particles().get()});
 
-    void ChangeRun(int32_t run_number) {
-        // This is called whenever the run number is changed.
-        // Use this callback to retrieve state that is keyed off of run number.
-        // This state should usually be managed by a Service.
-        // Note: You usually don't need this, because you can declare a Resource instead.
-    }
-
-    void Process(int32_t run_number, uint64_t event_number) {
-        // This is called on every event.
-        // Use this callback to call your Algorithm using all inputs and outputs
-        // The inputs will have already been fetched for you at this point.
-        auto output = m_algo->execute(
-          m_in_mc_particles(),
-          m_in_rc_particles(),
-          m_in_rc_particles_assoc(),
-          m_in_clu_assoc()
-        );
-
-        logger()->debug( "Event {}: Found {} reconstructed electron candidates", event_number, output->size() );
-
-        m_out_reco_particles() = std::move(output);
-        // JANA will take care of publishing the outputs for you.
-    }
+    logger()->debug("Found {} reconstructed electron candidates", m_out_reco_particles()->size());
+  }
 };
 } // namespace eicrecon
 
 ~~~
-Next, we register this with the `reco` plugin in src/global/reco/reco.cc:
+
+Note that `ChangeRun()` is omitted entirely — the JOmniFactory base class provides a default no-op implementation, so a factory that doesn't need to react to run-number changes does not have to override it.
+
+Next, we register this with the `reco` plugin in `src/global/reco/reco.cc`:
 ```c++
-    app->Add(new JOmniFactoryGeneratorT<ReconstructedElectrons_factory>(
-        "ReconstructedElectrons",
-        {"MCParticles", "ReconstructedChargedParticles", "ReconstructedChargedParticleAssociations",
-        "EcalBarrelScFiClusterAssociations",
-        "EcalEndcapNClusterAssociations",
-        "EcalEndcapPClusterAssociations",
-        "EcalEndcapPInsertClusterAssociations",
-        "EcalLumiSpecClusterAssociations",
-        },
-        {"ReconstructedElectrons"},
-        {},  // Override config values here
-        app
-    ));
+  app->Add(new JOmniFactoryGeneratorT<ReconstructedElectrons_factory>(
+      "ReconstructedElectrons", {"ReconstructedParticles"}, {"ReconstructedElectrons"}, {}, app));
 ```
 
+You can also create additional instances of the same factory with different parameter values. For example, the same `reco.cc` registers a second instance, `ReconstructedElectronsForDIS`, with a wider E/p window:
+```c++
+  app->Add(new JOmniFactoryGeneratorT<ReconstructedElectrons_factory>(
+      "ReconstructedElectronsForDIS", {"ReconstructedParticles"}, {"ReconstructedElectronsForDIS"},
+      {
+          .min_energy_over_momentum = 0.7, // GeV
+          .max_energy_over_momentum = 1.3  // GeV
+      },
+      app));
+```
 
-And finally, we add its output collection name to the output include list in src/services/io/podio/JEventProcessorPODIO:
+And finally, we add its output collection name to the output include list in `src/services/io/podio/JEventProcessorPODIO.cc`:
 
 ```c++
     "ReconstructedElectrons",
@@ -117,6 +98,7 @@ And finally, we add its output collection name to the output include list in src
 ```
 
 
+## The ElectronReconstruction algorithm
 
 `src/algorithms/reco/ElectronReconstruction.h`:
 
@@ -124,58 +106,58 @@ And finally, we add its output collection name to the output include list in src
 
 #pragma once
 
-#include <edm4eic/MCRecoClusterParticleAssociationCollection.h>
-#include <edm4eic/MCRecoParticleAssociationCollection.h>
+#include <algorithms/algorithm.h>
 #include <edm4eic/ReconstructedParticleCollection.h>
-#include <edm4hep/MCParticleCollection.h>
-#include <spdlog/logger.h>
-#include <memory>
-#include <vector>
+#include <string>
+#include <string_view>
 
 #include "ElectronReconstructionConfig.h"
 #include "algorithms/interfaces/WithPodConfig.h"
 
 namespace eicrecon {
 
-    class ElectronReconstruction : public WithPodConfig<ElectronReconstructionConfig>{
-    public:
+using ElectronReconstructionAlgorithm =
+    algorithms::Algorithm<algorithms::Input<edm4eic::ReconstructedParticleCollection>,
+                          algorithms::Output<edm4eic::ReconstructedParticleCollection>>;
 
-        // Initialization will set the pointer of the logger
-        void init(std::shared_ptr<spdlog::logger> logger);
+class ElectronReconstruction : public ElectronReconstructionAlgorithm,
+                               public WithPodConfig<ElectronReconstructionConfig> {
 
-        // Algorithm will apply E/p cut to reconstructed tracks based on truth track-cluster associations
-        std::unique_ptr<edm4eic::ReconstructedParticleCollection> execute(
-                const edm4hep::MCParticleCollection *mcparts,
-                const edm4eic::ReconstructedParticleCollection *rcparts,
-                const edm4eic::MCRecoParticleAssociationCollection *rcassoc,
-                const std::vector<const edm4eic::MCRecoClusterParticleAssociationCollection*> &in_clu_assoc
-        );
-        
-        // Could overload execute here to, for instance, use track projections 
-        // for track-cluster association (instead of truth information)
-        
-    private:
-        std::shared_ptr<spdlog::logger> m_log;  // pointer to logger
-        double m_electron{0.000510998928};      // electron mass
-    };
+public:
+  ElectronReconstruction(std::string_view name)
+      : ElectronReconstructionAlgorithm{name,
+                                        {"inputParticles"},
+                                        {"outputParticles"},
+                                        "selected electrons from reconstructed particles"} {}
+
+  void init() final {};
+  void process(const Input&, const Output&) const final;
+};
+
 } // namespace eicrecon
 
 ~~~
 
+A few things to note about the modern algorithm interface:
 
+- The algorithm inherits from `algorithms::Algorithm<Input<...>, Output<...>>`, so its inputs and outputs are declared *as types* in the template parameter list. The compiler then checks at the call site that the right collection types are passed in.
+- `WithPodConfig<ElectronReconstructionConfig>` provides the protected member `m_cfg`, which is what the algorithm uses to access its configuration values.
+- Logging methods (`info`, `debug`, `trace`, `warning`, `error`) are inherited — there is no `m_log` member to manage by hand.
+- `process()` is `const`. Any state that has to be set up once per job goes in `init()` (which here is empty); state that depends on the run number can be retrieved on the fly from `algorithms::GeoSvc` and friends.
 
-Note that the algorithm's parameters are enclosed in a Config object which lives at `src/algorithms/reco/ElectronReconstructionConfig.h` 
-and can be accessed via the protected member variable `m_cfg`.
+The algorithm's parameters live in a Config struct at `src/algorithms/reco/ElectronReconstructionConfig.h`:
 
 ```c++
+namespace eicrecon {
+
 struct ElectronReconstructionConfig {
 
-    double min_energy_over_momentum = 0.9;
-    double max_energy_over_momentum = 1.2;
-
+  double min_energy_over_momentum = 0.9;
+  double max_energy_over_momentum = 1.2;
 };
-```
 
+} // namespace eicrecon
+```
 
 The algorithm itself lives at `src/algorithms/reco/ElectronReconstruction.cc`:
 
@@ -184,74 +166,61 @@ The algorithm itself lives at `src/algorithms/reco/ElectronReconstruction.cc`:
 #include "ElectronReconstruction.h"
 
 #include <edm4eic/ClusterCollection.h>
+#include <edm4eic/ReconstructedParticleCollection.h>
 #include <edm4hep/utils/vector_utils.h>
 #include <fmt/core.h>
+#include <podio/RelationRange.h>
+#include <gsl/pointers>
+
+#include "algorithms/reco/ElectronReconstructionConfig.h"
 
 namespace eicrecon {
 
-  void ElectronReconstruction::init(std::shared_ptr<spdlog::logger> logger) {
-    m_log = logger;
-  }
+void ElectronReconstruction::process(const Input& input, const Output& output) const {
 
-  std::unique_ptr<edm4eic::ReconstructedParticleCollection> ElectronReconstruction::execute(
-    const edm4hep::MCParticleCollection *mcparts,
-    const edm4eic::ReconstructedParticleCollection *rcparts,
-    const edm4eic::MCRecoParticleAssociationCollection *rcassoc,
-    const std::vector<const edm4eic::MCRecoClusterParticleAssociationCollection*> &in_clu_assoc
-    ) {
+  const auto [rcparts] = input;
+  auto [out_electrons] = output;
 
-        // Step 1. Loop through MCParticle - cluster associations
-        // Step 2. Get Reco particle for the Mc Particle matched to cluster
-        // Step 3. Apply E/p cut using Reco cluster Energy and Reco Particle momentum
+  // out_electrons is a *subset* collection of the input ReconstructedParticles —
+  // PODIO objects are owned by exactly one collection, and a subset collection
+  // lets us refer to existing objects without copying or transferring ownership.
+  out_electrons->setSubsetCollection();
 
-        // Some obvious improvements:
-        // - E/p cut from real study optimized for electron finding and hadron rejection
-        // - use of any HCAL info?
-        // - check for duplicates?
+  for (const auto particle : *rcparts) {
 
-        // output container
-        auto out_electrons = std::make_unique<edm4eic::ReconstructedParticleCollection>();
-
-        for ( const auto *col : in_clu_assoc ){ // loop on cluster association collections
-          for ( auto clu_assoc : (*col) ){ // loop on MCRecoClusterParticleAssociation in this particular collection
-            auto sim = clu_assoc.getSim(); // McParticle
-            auto clu = clu_assoc.getRec(); // RecoCluster
-
-            m_log->trace( "SimId={}, CluId={}", clu_assoc.getSimID(), clu_assoc.getRecID() );
-            m_log->trace( "MCParticle: Energy={} GeV, p={} GeV, E/p = {} for PDG: {}", clu.getEnergy(), edm4hep::utils::magnitude(sim.getMomentum()), clu.getEnergy() / edm4hep::utils::magnitude(sim.getMomentum()), sim.getPDG() );
-
-
-            // Find the Reconstructed particle associated to the MC Particle that is matched with this reco cluster
-            // i.e. take (MC Particle <-> RC Cluster) + ( MC Particle <-> RC Particle ) = ( RC Particle <-> RC Cluster )
-            auto reco_part_assoc = rcassoc->begin();
-            for (; reco_part_assoc != rcassoc->end(); ++reco_part_assoc) {
-              if (reco_part_assoc->getSimID() == (unsigned) clu_assoc.getSimID()) {
-                break;
-              }
-            }
-
-            // if we found a reco particle then test for electron compatibility
-            if ( reco_part_assoc != rcassoc->end() ){
-              auto reco_part = reco_part_assoc->getRec();
-              double EoverP = clu.getEnergy() / edm4hep::utils::magnitude(reco_part.getMomentum());
-              m_log->trace( "ReconstructedParticle: Energy={} GeV, p={} GeV, E/p = {} for PDG (from truth): {}", clu.getEnergy(), edm4hep::utils::magnitude(reco_part.getMomentum()), EoverP, sim.getPDG() );
-
-              // Apply the E/p cut here to select electons
-              if ( EoverP >= m_cfg.min_energy_over_momentum && EoverP <= m_cfg.max_energy_over_momentum ) {
-                out_electrons->push_back(reco_part.clone());
-              }
-
-            } else {
-              m_log->debug( "Could not find reconstructed particle for SimId={}", clu_assoc.getSimID() );
-            }
-
-          } // loop on MC particle to cluster associations in collection
-        } // loop on collections
-
-        m_log->debug( "Found {} electron candidates", out_electrons->size() );
-        return out_electrons;
+    // Skip particles without an associated cluster (no calorimeter info)
+    if (particle.getClusters().empty()) {
+      continue;
+    }
+    // Skip neutral particles (no track momentum to compare against)
+    if (particle.getCharge() == 0) {
+      continue;
     }
 
+    double E      = particle.getClusters()[0].getEnergy();
+    double p      = edm4hep::utils::magnitude(particle.getMomentum());
+    double EOverP = E / p;
+
+    trace("ReconstructedElectron: Energy={} GeV, p={} GeV, E/p = {} for PDG (from truth): {}",
+          E, p, EOverP, particle.getPDG());
+
+    // Apply the E/p cut here to select electrons
+    if (EOverP >= m_cfg.min_energy_over_momentum &&
+        EOverP <= m_cfg.max_energy_over_momentum) {
+      out_electrons->push_back(particle);
+    }
+  }
+  debug("Found {} electron candidates", out_electrons->size());
 }
 
+} // namespace eicrecon
+
 ~~~
+
+Compared to the truth-association-based draft from earlier in the tutorial, this version is much shorter because:
+
+- The track ↔ cluster matching has already been done upstream and is exposed via `ReconstructedParticle::getClusters()`.
+- We don't need any `MCRecoParticleAssociation` or `MCRecoClusterParticleAssociation` collections — the only input is the merged `ReconstructedParticles`.
+- We don't allocate new particles; we just keep references to the originals via a *subset* collection (`setSubsetCollection()`).
+
+The exercise from earlier episodes — wiring a custom variant that takes truth associations as additional inputs — is still a useful one. Compare your version with the version on `main` to see the trade-offs between richness of inputs and code simplicity.

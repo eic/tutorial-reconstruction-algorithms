@@ -18,17 +18,17 @@ Parameters are also handled using registered members. JOmniFactory provides a `P
     ParameterRef<std::string> m_energyWeight {this, "energyWeight", config().energyWeight};
 ```
 
-Parameters are fetched immediately before `Init()` is called, so you may access them from any of the callbacks like so:
+Parameters are fetched immediately before `Configure()` is called, so you may access them from any of the callbacks like so:
 
 ```c++
-    void Process(int64_t run_number, uint64_t event_number) {
+    void Process(int32_t run_number, uint64_t event_number) {
         logger()->debug( "Event {}: samplingFraction = {}", event_number, m_samplingFraction() );
     }
 
 ```
 Because we are using ParameterRefs, we can also access the field the ref points to directly:
 ```c++
-    void Process(int64_t run_number, uint64_t event_number) {
+    void Process(int32_t run_number, uint64_t event_number) {
         logger()->debug( "Event {}: samplingFraction = {}", event_number, config().sampFrac );
     }
 ```

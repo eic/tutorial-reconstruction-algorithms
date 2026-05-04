@@ -19,7 +19,7 @@ Instead of handing over the OmniFactory to JANA directly, we create a `JOmniFact
 Here is how you set up a factory generator:
 
 ```c++
-    app->Add(new JOmniFactoryGeneratorT<MC2SmearedParticle_factory>(
+    app->Add(new JOmniFactoryGeneratorT<MC2ReconstructedParticle_factory>(
             "GeneratedParticles",
             {"MCParticles"},
             {"GeneratedParticles"},
@@ -31,7 +31,7 @@ In this example, "GeneratedParticles" is the factory instance's unique tag, `{"M
 
 - If you are only creating one instance of this factory, feel free to use the "primary" output collection name as the factory prefix. (This has to be unique because PODIO collection names have to be unique.)
 
-- Collection names are positional, so they need to be in the same order as the `PodioInput` and `VariationalPodioInput` declarations in the factory. 
+- Collection names are positional, so they need to be in the same order as the `PodioInput` and `VariadicPodioInput` declarations in the factory. 
 
 - Variadic inputs are a little bit interesting: You can have any number of variadic inputs mixed in among the non-variadic inputs, as long as there are the same number of collection names for each variadic input. If this confuses you, just restrict yourself to one variadic input and put it as the very last input, like most programming languages do.
 
@@ -54,15 +54,17 @@ eicrecon -Ppodio:output_collections=MyNewCollectionName1,MyNewCollectionName2 in
 
 #### To permanently include your factory's outputs in the output file:
 
-Add your collection name to the `output_collections` list in src/services/io/podio/JEventProcessorPODIO.cc:44
+Add your collection name to the `output_collections` list in `src/services/io/podio/JEventProcessorPODIO.cc`:
 ```c++
-    std::vector<std::string> output_collections={
-            "EventHeader",
-            "MCParticles",
-            "CentralTrackingRecHits",
-            "CentralTrackSeedingResults",
-            "CentralTrackerMeasurements",
-            //...
+  std::vector<std::string> output_collections = {
+      // Header and other metadata
+      "EventHeader",
+
+      // Truth record
+      "MCParticles",
+      "MCBeamElectrons",
+      "MCBeamProtons",
+      // ...
 ```
 
 ### To temporarily use your factory's outputs as inputs to another factory
@@ -73,9 +75,9 @@ eicrecon -Ptargetfactory:InputTags=MyNewCollectionName1,MyNewCollection2 in.root
 
 ### To permanently use your factory's outputs as inputs to another factory
 
-Change the collection name in the `OmniFactoryGeneratorT` or `JChainMultifactoryGeneratorT`:
+Change the collection name in the `JOmniFactoryGeneratorT`:
 ```c++
-    app->Add(new JOmniFactoryGeneratorT<MC2SmearedParticle_factory>(
+    app->Add(new JOmniFactoryGeneratorT<MC2ReconstructedParticle_factory>(
             "GeneratedParticles",
             {"MCParticlesSmeared"},            // <== Used to be "MCParticles"
             {"GeneratedParticles"},
@@ -87,7 +89,7 @@ Change the collection name in the `OmniFactoryGeneratorT` or `JChainMultifactory
 > - Create a JOmniFactoryGenerator for your ElectronReconstruction factory
 > - Give your factory's output collection a fun name
 > - Call your factory from the command line and verify that you see its logger output.
-> - Add it to the `JEventSourcePODIO::output_collections`, so that it gets called automatically.
+> - Add it to the `JEventProcessorPODIO::output_collections`, so that it gets called automatically.
 > - Experiment with multiple factory generators so you can have multiple instances of the same factory
 {: .challenge}
 

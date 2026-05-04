@@ -49,7 +49,7 @@ There are a number of different kinds of factories available in JANA which we ha
 4. It requires a deeper understanding of JANA internals to use correctly. The user is allowed to perform actions inside the factory callbacks that don't necessarily make sense. We remedied this issue by developing `JOmniFactory`, which *declares* what it needs upfront, and JANA *provides* it only when it makes sense. `JOmniFactory` supports all of the functionality developed for points (1), (2), and (3), and presents a simpler interface. 
 
 
-In summary, always use `JOmniFactory` if you are writing something new. All existing factories in EICrecon are in the process of being migrated right now: https://github.com/eic/EICrecon/issues/1176.
+In summary, always use `JOmniFactory` if you are writing something new. The migration of all EICrecon factories to `JOmniFactory` (tracked in https://github.com/eic/EICrecon/issues/1176) is essentially complete, so you should not encounter the older base classes in current code.
 
 
 ## The JOmniFactory interface
@@ -102,16 +102,16 @@ public:
         // The logger, parameters, and services have all been fetched before this is called
     }
 
-    void ChangeRun(int64_t run_number) {
+    void ChangeRun(int32_t run_number) {
         // This is called whenever the run number is changed.
         // Use this callback to retrieve state that is keyed off of run number.
     }
 
-    void Process(int64_t run_number, uint64_t event_number) {
+    void Process(int32_t run_number, uint64_t event_number) {
         // This is called on every event.
         // Use this callback to call your Algorithm using all inputs and outputs
         // The inputs will have already been fetched for you at this point.
-        // m_algo->execute(...);
+        // m_algo->process({...}, {...});
 
         logger()->debug( "Event {}: Calling Process()", event_number );
     }
@@ -120,21 +120,21 @@ public:
 
 ## The JOmniFactory inputs and outputs
 
-The user specifies the JOmniFactory's inputs by declaring `PodioInput` or `VariationalPodioInput` objects as data members. These are templated on the basic PODIO type (Not the collection type or mutable type or object type or data type), and require the user to pass `this` as a constructor argument. These objects immediately register themselves with the factory, so that the factory always knows exactly what data it needs to fetch. To access the data once it has been fetched, the user can call the object's `operator()`, which returns a constant pointer to a PODIO collection of the correct type. For instance, suppose the user declares the data member:
+The user specifies the JOmniFactory's inputs by declaring `PodioInput` or `VariadicPodioInput` objects as data members. These are templated on the basic PODIO type (Not the collection type or mutable type or object type or data type), and require the user to pass `this` as a constructor argument. These objects immediately register themselves with the factory, so that the factory always knows exactly what data it needs to fetch. To access the data once it has been fetched, the user can call the object's `operator()`, which returns a constant pointer to a PODIO collection of the correct type. For instance, suppose the user declares the data member:
 
 ```c++
-PodioInput<MCParticles> m_particles_in {this};
+PodioInput<edm4hep::MCParticle> m_particles_in {this};
 ```
 
 In this case, the user would access the input data like this:
 
 ```c++
-const MCParticlesCollection* particles_in = m_particles_in();
+const edm4hep::MCParticleCollection* particles_in = m_particles_in();
 ```
 
-Of course, for brevity, the user could simply write this instead:
+Of course, for brevity, the user could simply pass `m_particles_in()` straight into the algorithm, and write the algorithm output through `m_particles_out().get()` — which is the pattern most factories use today:
 ```c++
-m_particles_out() = smearing_algo->execute( m_particles_in() );
+m_algo->process({m_particles_in()}, {m_particles_out().get()});
 ```
 
 As you have just seen, PodioOutputs are very analogous to PodioInputs. 
