@@ -11,10 +11,10 @@ objectives:
 
 ## The difference between a factory and an algorithm
 
-*Algorithms* are classes that perform one kind of calculation we need and they do so in a generic, framework-independent way. The core of an Algorithm is a method called `execute` which inputs some PODIO collections and outputs some other PODIO collections. Algorithms don't know or care where the inputs come from and where they go. Algorithms also don't know much about where their parameters come from; rather, they are passed a `Config` structure which contains the parameters' values. The nice thing about algorithms is that they are simple to design and test, and easy to reuse for different detectors, frameworks, or even entire experiments.
+*Algorithms* are classes that perform one kind of calculation we need and they do so in a generic, framework-independent way. The core of an Algorithm is a method called `process` which takes a tuple of input PODIO collections and a tuple of output PODIO collections. Algorithms don't know or care where the inputs come from and where they go. Algorithms also don't know much about where their parameters come from; rather, they are passed a `Config` structure which contains the parameters' values. The nice thing about algorithms is that they are simple to design and test, and easy to reuse for different detectors, frameworks, or even entire experiments.
 
 
-Most of what makes an Algorithm an Algorithm is convention. (These are largely inspired by the KISS principle in software engineering!) There is an ongoing effort to create a "framework-less framework" for formally expressing Algorithms using templates, which lives at https://github.com/eic/algorithms. Eventually, we may encourage users to have all Algorithms inherit from the `Algorithm<Input<...>, Output<...>>` templated interface. For now, however, just follow the Algorithm conventions that we will go over next.
+In EICrecon, all new algorithms inherit from the templated `algorithms::Algorithm<Input<...>, Output<...>>` interface (provided by the [eic/algorithms](https://github.com/eic/algorithms) "framework-less framework"), and use the `WithPodConfig<ConfigT>` mixin to attach a configuration struct. The `algorithms::Algorithm` base provides logging facilities (`info()`, `debug()`, `trace()`, ...) and a structured way of declaring inputs and outputs by their PODIO collection types.
 
 ## Where to put the algorithm code
 
@@ -29,28 +29,64 @@ Here is a template for an algorithm header file:
 
 #pragma once
 
-// #include relevant header files here
+#include <algorithms/algorithm.h>
+// #include relevant edm4eic / edm4hep collection headers here
+
+#include "MyAlgorithmNameConfig.h"
+#include "algorithms/interfaces/WithPodConfig.h"
 
 namespace eicrecon {
 
-    class MyAlgorithmName {
+    using MyAlgorithmNameAlgorithm =
+        algorithms::Algorithm<algorithms::Input<MyInputCollection>,
+                              algorithms::Output<MyOutputCollection>>;
+
+    class MyAlgorithmName : public MyAlgorithmNameAlgorithm,
+                            public WithPodConfig<MyAlgorithmNameConfig> {
 
     public:
-            
-        // init function contains any required initialization
-        void init();
 
-        // execute function contains main algorithm processes
-        // (e.g. manipulate existing objects to create new objects)
-        std::unique_ptr<MyReturnDataType> execute();
-        
-        // Any additional public members go here 
+        MyAlgorithmName(std::string_view name)
+            : MyAlgorithmNameAlgorithm{name,
+                                       {"inputCollectionName"},
+                                       {"outputCollectionName"},
+                                       "Short description of what this algorithm does."} {}
 
-    private:
-        std::shared_ptr<spdlog::logger> m_log;
-        // any additional private members (e.g. services and calibrations) go here
+        // init() is called once before processing starts. Most algorithms do not need it.
+        void init() final {};
+
+        // process() does the actual work for each event. The Input/Output tuples
+        // contain pointers to the PODIO collections.
+        void process(const Input&, const Output&) const final;
 
     };
+} // namespace eicrecon
+
+~~~
+
+A few things worth noting:
+
+- The class is *templated* on the list of input and output collection types. The `Input` and `Output` aliases inside the class expand into `std::tuple` of pointers (`gsl::not_null<const T*>` for inputs, `T*` for outputs).
+- `process()` is `const` — algorithms must not mutate their own state during event processing. Run-by-run state should be set up in `init()` instead.
+- Logging is inherited from `algorithms::AlgorithmBase`, so inside `process()` you simply call `info(...)`, `debug(...)`, or `trace(...)` directly — no logger pointer needs to be passed in.
+- The configuration struct is held by `WithPodConfig` and accessible as the protected member `m_cfg`.
+
+The corresponding implementation file unpacks the input and output tuples with structured bindings:
+
+~~~ c++
+
+#include "MyAlgorithmName.h"
+
+namespace eicrecon {
+
+    void MyAlgorithmName::process(const Input& input, const Output& output) const {
+
+        const auto [in_particles] = input;
+        auto [out_particles]      = output;
+
+        // ... fill out_particles using in_particles and m_cfg ...
+    }
+
 } // namespace eicrecon
 
 ~~~
@@ -64,37 +100,34 @@ The code to call an algorithm from a factory generally follows a specific patter
         // This is called when the factory is instantiated.
         // Use this callback to make sure the algorithm is configured.
         // The logger, parameters, and services have all been fetched before this is called
-        m_algo = std::make_unique<eicrecon::ElectronReconstruction>();
 
-        // Pass config object to algorithm
+        // Construct the algorithm with the factory's prefix as its name —
+        // this is what hooks the algorithm's logger up to the same prefix as the factory.
+        m_algo = std::make_unique<eicrecon::ElectronReconstruction>(GetPrefix());
+
+        // Forward the JANA log level down to the algorithm.
+        m_algo->level(static_cast<algorithms::LogLevel>(logger()->level()));
+
+        // Pass the config object to the algorithm.
         m_algo->applyConfig(config());
 
-        // If we needed geometry, we'd obtain it like so
-        // m_algo->init(m_geoSvc().detector(), m_geoSvc().converter(), logger());
-
-        m_algo->init(logger());
+        // Call init() once. Note that init() takes no arguments — services
+        // (e.g. geometry) are accessed by the algorithms framework via the
+        // algorithms::ServiceSvc / algorithms::GeoSvc, not by passing pointers in.
+        m_algo->init();
     }
 
-    void Process(int64_t run_number, uint64_t event_number) {
-        // This is called on every event.
-        // Use this callback to call your Algorithm using all inputs and outputs
-        // The inputs will have already been fetched for you at this point.
-        auto output = m_algo->execute(
-          m_in_mc_particles(),
-          m_in_rc_particles(),
-          m_in_rc_particles_assoc(),
-          m_in_clu_assoc()
-        );
-
-        m_out_reco_particles() = std::move(output);
-        // JANA will take care of publishing the outputs for you.
+    void Process(int32_t /* run_number */, uint64_t /* event_number */) {
+        // This is called on every event. The inputs will have already been fetched.
+        // Call process() with brace-enclosed lists of input pointers and output pointers.
+        m_algo->process({m_in_particles()}, {m_out_particles().get()});
     }
 ```
 
 
 > Exercise:
 > - Create your own ElectronReconstruction algorithm using the code skeleton above.
-> - Print some log messages from your algorithm's `execute()` method. 
+> - Print some log messages from your algorithm's `process()` method using `info(...)` / `debug(...)`.
 > - Have your ElectronReconstruction factory call the algorithm.
 > - Run this end-to-end.
 {: .challenge}
