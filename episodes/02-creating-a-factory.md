@@ -2,12 +2,24 @@
 title: "Creating a factory"
 teaching: 10
 exercises: 1
-objectives:
-- "Understand the basics of EICrecon's plugin structure"
-- "Understand where to put new factories"
-- "Understand which factory base class to use"
-- "Understand the JOmniFactory interface"
 ---
+
+::::::::::::::::::::::::::::::::::::::::::::: questions
+
+- What is the difference between an algorithm and a factory?
+- How is EICrecon's plugin structure organized, and where do new factories go?
+- Which factory base class should I use, and what does its interface look like?
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: objectives
+
+- Understand the basics of EICrecon's plugin structure.
+- Understand where to put new factories.
+- Understand which factory base class to use.
+- Understand the JOmniFactory interface.
+
+:::::::::::::::::::::::::::::::::::::::::::::
 
 ## Algorithms and Factories
 
@@ -22,7 +34,7 @@ Here's an example to help illustrate what goes into the Algorithm and what goes 
 
 JANA plugins are a mechanism for controlling which parts of `EICrecon` get compiled and linked together. They give us the ability to avoid having to compile and link heavy dependencies that not everybody will be using all the time. For instance, by default EICrecon uses ACTS for tracking, but perhaps someone wants to benchmark ACTS against Genfit -- we wouldn't want to have to ship Genfit inside eic-shell all the time.
 
-Plugins were also designed so that users could integrate their analyses directly into reconstruction while keeping them independent and optional. This pattern is heavily used in the GlueX experiment and recommended in the tutorials on JANA's own documentation. In EICrecon, we set up separate plugins for each detector and each benchmark, but not for each analysis. We strongly recommend following the advice given in the analysis tutorials instead. The instructions for adding a new plugin are [here](https://eic.github.io/tutorial-jana2/03-end-user-plugin/index.html).
+Plugins were also designed so that users could integrate their analyses directly into reconstruction while keeping them independent and optional. This pattern is heavily used in the GlueX experiment and recommended in the tutorials on JANA's own documentation. In EICrecon, we set up separate plugins for each detector and each benchmark, but not for each analysis. We strongly recommend following the advice given in the [analysis tutorials](https://eic.github.io/tutorial-analysis/) instead. See the [JANA2 end-user plugin tutorial](https://eic.github.io/tutorial-jana2/03-end-user-plugin/index.html) for instructions on adding a new plugin.
 
 
 
@@ -49,7 +61,7 @@ There are a number of different kinds of factories available in JANA which we ha
 4. It requires a deeper understanding of JANA internals to use correctly. The user is allowed to perform actions inside the factory callbacks that don't necessarily make sense. We remedied this issue by developing `JOmniFactory`, which *declares* what it needs upfront, and JANA *provides* it only when it makes sense. `JOmniFactory` supports all of the functionality developed for points (1), (2), and (3), and presents a simpler interface. 
 
 
-In summary, always use `JOmniFactory` if you are writing something new. The migration of all EICrecon factories to `JOmniFactory` (tracked in https://github.com/eic/EICrecon/issues/1176) is essentially complete, so you should not encounter the older base classes in current code.
+In summary, always use `JOmniFactory` if you are writing something new. The migration of all EICrecon factories to `JOmniFactory` (tracked in [EICrecon issue #1176](https://github.com/eic/EICrecon/issues/1176)) is essentially complete, so you should not encounter the older base classes in current code.
 
 
 ## The JOmniFactory interface
@@ -140,9 +152,31 @@ m_algo->process({m_particles_in()}, {m_particles_out().get()});
 As you have just seen, PodioOutputs are very analogous to PodioInputs. 
 
 
-> Exercise:
-> - Create your own ElectronReconstruction factory from the code skeleton above
-> - Give your OmniFactory a single output collection
-> - Have its Process() method produce some log output
-> - Experiment with giving it different input collections
-{: .challenge}
+::::::::::::::::::::::::::::::::::::::::::::: challenge
+
+## Exercise
+
+- Create your own ElectronReconstruction factory from the code skeleton above.
+- Give your OmniFactory a single output collection.
+- Have its `Process()` method produce some log output.
+- Experiment with giving it different input collections.
+
+::::::::::::::: solution
+
+Copy the skeleton into a new header under `src/factories/reco/`, keep a single `PodioOutput`
+member, and add a `logger()->debug(...)` call inside `Process()`. Adding or changing `PodioInput`
+members changes which collections JANA fetches for you; the factory will fail to run if you request
+a collection that no other factory produces.
+
+:::::::::::::::
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: keypoints
+
+- *Algorithms* do framework-independent calculation; *factories* attach algorithms to JANA2.
+- Plugins control what gets compiled; register factory generators in a plugin's `InitPlugin()`.
+- Reusable algorithms go in `src/algorithms` and their factories in `src/factories`.
+- Always use `JOmniFactory` for new code; declare inputs, outputs, parameters, and services as registered members.
+
+:::::::::::::::::::::::::::::::::::::::::::::

@@ -2,12 +2,24 @@
 title: "Parameterizing a factory"
 teaching: 5
 exercises: 0
-objectives:
-- "Learn how to set parameters on a factory"
-- "Learn how to override factories via a generator"
-- "Learn how to override factories via the command line"
-- "Learn how to access services from a factory"
 ---
+
+::::::::::::::::::::::::::::::::::::::::::::: questions
+
+- How do I give a factory configurable parameters?
+- How do I override those parameters from a generator or the command line?
+- How do I access services such as geometry from a factory?
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: objectives
+
+- Learn how to set parameters on a factory.
+- Learn how to override factories via a generator.
+- Learn how to override factories via the command line.
+- Learn how to access services from a factory.
+
+:::::::::::::::::::::::::::::::::::::::::::::
 
 ## Setting parameters on a factory
 
@@ -87,8 +99,30 @@ Services are singletons that provide access to resources such as loggers, geomet
 
 Oftentimes we want to retrieve a resource from a Service and refresh it whenever the run number changes. OmniFactory provides `Resource` for this purpose.
 
-> Exercise:
-> - Give your factory a Config struct
-> - Give your Config struct some parameters
-> - Experiment with overriding parameter values in the generator and on the command line.
-{: .challenge}
+::::::::::::::::::::::::::::::::::::::::::::: challenge
+
+## Exercise
+
+- Give your factory a Config struct.
+- Give your Config struct some parameters.
+- Experiment with overriding parameter values in the generator and on the command line.
+
+::::::::::::::: solution
+
+Add a `struct` with a couple of fields (for example a `double threshold`) and pass it as the second
+template argument to `JOmniFactory`. Register `ParameterRef` members pointing at those fields. You
+can then set them in the generator with brace-initialization (`{.threshold = 6.1}`) or on the
+command line with `-P<prefix>:threshold=12.0`; the command-line value takes precedence.
+
+:::::::::::::::
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: keypoints
+
+- Parameters are registered members; in EICrecon we back them with a Config struct via `ParameterRef`.
+- Pass the Config type as the second `JOmniFactory` template argument to make it available through `config()`.
+- Override parameters in the generator with brace-initialization, or on the command line with `-P<prefix>:<name>=<value>`.
+- Access shared resources (geometry, fields) through thread-safe `Service` members.
+
+:::::::::::::::::::::::::::::::::::::::::::::

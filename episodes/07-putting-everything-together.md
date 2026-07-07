@@ -2,10 +2,19 @@
 title: "Putting everything together"
 teaching: 5
 exercises: 0
-objectives:
-- "Get the electron finder running end-to-end"
 ---
 
+::::::::::::::::::::::::::::::::::::::::::::: questions
+
+- How do the factory, algorithm, config, and generator fit together in the final electron finder?
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: objectives
+
+- Get the electron finder running end-to-end.
+
+:::::::::::::::::::::::::::::::::::::::::::::
 
 ## The final ReconstructedElectron factory
 
@@ -13,7 +22,7 @@ Here is the final `ReconstructedElectrons_factory`. The current implementation i
 
 `src/factories/reco/ReconstructedElectrons_factory.h`:
 
-~~~ c++
+```c++
 
 #pragma once
 
@@ -69,7 +78,7 @@ public:
 };
 } // namespace eicrecon
 
-~~~
+```
 
 Note that `ChangeRun()` is omitted entirely — the JOmniFactory base class provides a default no-op implementation, so a factory that doesn't need to react to run-number changes does not have to override it.
 
@@ -102,7 +111,7 @@ And finally, we add its output collection name to the output include list in `sr
 
 `src/algorithms/reco/ElectronReconstruction.h`:
 
-~~~ c++
+```c++
 
 #pragma once
 
@@ -136,7 +145,7 @@ public:
 
 } // namespace eicrecon
 
-~~~
+```
 
 A few things to note about the modern algorithm interface:
 
@@ -161,7 +170,7 @@ struct ElectronReconstructionConfig {
 
 The algorithm itself lives at `src/algorithms/reco/ElectronReconstruction.cc`:
 
-~~~ c++
+```c++
 
 #include "ElectronReconstruction.h"
 
@@ -215,7 +224,7 @@ void ElectronReconstruction::process(const Input& input, const Output& output) c
 
 } // namespace eicrecon
 
-~~~
+```
 
 Compared to the truth-association-based draft from earlier in the tutorial, this version is much shorter because:
 
@@ -224,3 +233,12 @@ Compared to the truth-association-based draft from earlier in the tutorial, this
 - We don't allocate new particles; we just keep references to the originals via a *subset* collection (`setSubsetCollection()`).
 
 The exercise from earlier episodes — wiring a custom variant that takes truth associations as additional inputs — is still a useful one. Compare your version with the version on `main` to see the trade-offs between richness of inputs and code simplicity.
+
+::::::::::::::::::::::::::::::::::::::::::::: keypoints
+
+- The final electron finder is one factory (`ReconstructedElectrons_factory`), one algorithm (`ElectronReconstruction`), and a Config struct, wired up in `src/global/reco/reco.cc`.
+- Reading the pre-merged `ReconstructedParticles` (with its `getClusters()` relation) makes the algorithm short — no truth-association inputs are needed.
+- The output is a subset collection of selected electrons; register additional generator instances (e.g. `ReconstructedElectronsForDIS`) for different E/p windows.
+- Omit `ChangeRun()` when a factory has no run-dependent state; the base class provides a no-op default.
+
+:::::::::::::::::::::::::::::::::::::::::::::

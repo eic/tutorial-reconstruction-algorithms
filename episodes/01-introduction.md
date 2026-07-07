@@ -2,10 +2,21 @@
 title: "Introduction"
 teaching: 5
 exercises: 0
-objectives:
-- "Define physics goal of new reconstruction algorithm"
-- "Identify what information is needed to accomplish this goal"
 ---
+
+::::::::::::::::::::::::::::::::::::::::::::: questions
+
+- What is the physics goal of the reconstruction algorithm we will build?
+- What information do we need to accomplish this goal?
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: objectives
+
+- Define the physics goal of a new reconstruction algorithm.
+- Identify what information is needed to accomplish this goal.
+
+:::::::::::::::::::::::::::::::::::::::::::::
 
 ## Background
 
@@ -40,19 +51,30 @@ One key ingredient in electron ID is the ratio of the energy deposited in the ca
 ### What information is required?
 
 This simple electron ID algorithm requires three pieces of information, which will be obtained from pre-existing algorithms/factories:
+
 - Reconstructed tracks
 - Calorimeter clusters
 - Matching between tracks and clusters
 
 Matching between tracks and clusters can be obtained from truth information, or from track projections.  
+
 - In the former case, the reconstructed tracks and clusters are matched through their association to the same MC particle.  
 - In the latter case, a matching criteria is applied to the position of the calorimeter cluster and the projected position of the track at the calorimeter.  
 For the purposes of this tutorial, we will use truth matching.
 
 The input and output objects of our factory should be stored as PODIO collections.  
+
 - Reconstructed tracks are stored as a collection of `edm4eic::ReconstructedParticle`
 - Calorimeter clusters are stored as a collection of `edm4eic::Cluster`
 - Associations between reconstructed tracks and MC particles are stored as a collection of `edm4eic::MCRecoParticleAssociation`
 - Associations between calorimeter clusters and MC particles are stored as a collection of `edm4eic:MCRecoClusterParticleAssociation`
 
-The members of each of these data types can be found in `edm4eic.yaml` in the `EDM4eic` repository. 
+The members of each of these data types can be found in `edm4eic.yaml` in the `EDM4eic` repository.
+
+::::::::::::::::::::::::::::::::::::::::::::: keypoints
+
+- This tutorial builds a simple electron-ID algorithm that selects particles with 0.9 < E/p < 1.2.
+- The algorithm needs reconstructed tracks, calorimeter clusters, and a track-to-cluster matching (here, truth matching).
+- Inputs and outputs are stored as PODIO collections such as `edm4eic::ReconstructedParticle` and `edm4eic::Cluster`.
+
+:::::::::::::::::::::::::::::::::::::::::::::

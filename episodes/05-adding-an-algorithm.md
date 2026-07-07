@@ -2,12 +2,23 @@
 title: "Adding an algorithm"
 teaching: 5
 exercises: 1
-objectives:
-- "Understand the difference between a factory and an algorithm"
-- "Understand where to put the algorithm code"
-- "Understand the basic algorithm interface"
-- "Understand how to call an algorithm from a factory"
 ---
+
+::::::::::::::::::::::::::::::::::::::::::::: questions
+
+- What is the difference between a factory and an algorithm?
+- Where does algorithm code live, what does its interface look like, and how does a factory call it?
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: objectives
+
+- Understand the difference between a factory and an algorithm.
+- Understand where to put the algorithm code.
+- Understand the basic algorithm interface.
+- Understand how to call an algorithm from a factory.
+
+:::::::::::::::::::::::::::::::::::::::::::::
 
 ## The difference between a factory and an algorithm
 
@@ -25,7 +36,7 @@ All algorithms that are not specific to a single detector should go under `src/a
 
 Here is a template for an algorithm header file:
 
-~~~ c++
+```c++
 
 #pragma once
 
@@ -62,7 +73,7 @@ namespace eicrecon {
     };
 } // namespace eicrecon
 
-~~~
+```
 
 A few things worth noting:
 
@@ -73,7 +84,7 @@ A few things worth noting:
 
 The corresponding implementation file unpacks the input and output tuples with structured bindings:
 
-~~~ c++
+```c++
 
 #include "MyAlgorithmName.h"
 
@@ -89,7 +100,7 @@ namespace eicrecon {
 
 } // namespace eicrecon
 
-~~~
+```
 
 ## How to call an algorithm from a factory
 
@@ -125,9 +136,33 @@ The code to call an algorithm from a factory generally follows a specific patter
 ```
 
 
-> Exercise:
-> - Create your own ElectronReconstruction algorithm using the code skeleton above.
-> - Print some log messages from your algorithm's `process()` method using `info(...)` / `debug(...)`.
-> - Have your ElectronReconstruction factory call the algorithm.
-> - Run this end-to-end.
-{: .challenge}
+::::::::::::::::::::::::::::::::::::::::::::: challenge
+
+## Exercise
+
+- Create your own ElectronReconstruction algorithm using the code skeleton above.
+- Print some log messages from your algorithm's `process()` method using `info(...)` / `debug(...)`.
+- Have your ElectronReconstruction factory call the algorithm.
+- Run this end-to-end.
+
+::::::::::::::: solution
+
+Create `ElectronReconstruction.h`/`.cc` (plus a `ElectronReconstructionConfig.h`) under
+`src/algorithms/reco`, inheriting from `algorithms::Algorithm<Input<...>, Output<...>>` and
+`WithPodConfig`. Add `debug(...)` calls in `process()`. In the factory's `Configure()`, construct
+the algorithm with `GetPrefix()`, `applyConfig(config())`, and `init()`; in `Process()` call
+`m_algo->process({...}, {...})`. Rebuilding EICrecon and running `eicrecon` at debug log level
+should show your messages.
+
+:::::::::::::::
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: keypoints
+
+- Algorithms do framework-independent work; their core is a `const process(const Input&, const Output&)` method.
+- Reusable algorithms live under `src/algorithms` (here `src/algorithms/reco`).
+- Algorithms inherit logging and declare inputs/outputs as template types; config lives in `m_cfg` via `WithPodConfig`.
+- A factory constructs the algorithm in `Configure()` (`applyConfig`, `init`) and calls `process()` in `Process()`.
+
+:::::::::::::::::::::::::::::::::::::::::::::

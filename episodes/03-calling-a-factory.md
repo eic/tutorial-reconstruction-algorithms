@@ -2,11 +2,22 @@
 title: "Calling a factory"
 teaching: 10
 exercises: 1
-objectives:
-- "Learn how to wire a factory using a factory generator"
-- "Learn how to call the factory as a once-off"
-- "Learn how to call the factory every time"
 ---
+
+::::::::::::::::::::::::::::::::::::::::::::: questions
+
+- How do I wire a factory into JANA2 using a factory generator?
+- How do I make my factory's outputs available, either once-off or every time?
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: objectives
+
+- Learn how to wire a factory using a factory generator.
+- Learn how to call the factory as a once-off.
+- Learn how to call the factory every time.
+
+:::::::::::::::::::::::::::::::::::::::::::::
 
 ## Wiring a factory using a factory generator
 
@@ -85,11 +96,34 @@ Change the collection name in the `JOmniFactoryGeneratorT`:
             ));
 ```
 
-> Exercise:
-> - Create a JOmniFactoryGenerator for your ElectronReconstruction factory
-> - Give your factory's output collection a fun name
-> - Call your factory from the command line and verify that you see its logger output.
-> - Add it to the `JEventProcessorPODIO::output_collections`, so that it gets called automatically.
-> - Experiment with multiple factory generators so you can have multiple instances of the same factory
-{: .challenge}
+::::::::::::::::::::::::::::::::::::::::::::: challenge
 
+## Exercise
+
+- Create a JOmniFactoryGenerator for your ElectronReconstruction factory.
+- Give your factory's output collection a fun name.
+- Call your factory from the command line and verify that you see its logger output.
+- Add it to the `JEventProcessorPODIO::output_collections`, so that it gets called automatically.
+- Experiment with multiple factory generators so you can have multiple instances of the same factory.
+
+::::::::::::::: solution
+
+Register a `JOmniFactoryGeneratorT<...>` inside `src/global/reco/reco.cc` with your chosen output
+collection name. Running `eicrecon` with a raised log level (for example
+`eicrecon -Pjana:loglevel=debug ...`) shows your `Process()` log lines. Adding the collection name
+to `output_collections` in `JEventProcessorPODIO.cc` makes it persist to the output file
+automatically. Adding a second generator with a different tag and different collection names
+produces a second, independent instance of the same factory class.
+
+:::::::::::::::
+
+:::::::::::::::::::::::::::::::::::::::::::::
+
+::::::::::::::::::::::::::::::::::::::::::::: keypoints
+
+- A `JOmniFactoryGeneratorT` is a recipe JANA2 uses to instantiate factories, one per thread.
+- Each generator assigns a unique prefix plus positional input and output collection names.
+- Use `podio:output_collections` (or `JEventProcessorPODIO.cc`) to persist outputs, and `InputTags` (or the generator) to rewire inputs.
+- Collection names and prefixes must be globally unique across plugins.
+
+:::::::::::::::::::::::::::::::::::::::::::::
