@@ -1,0 +1,32 @@
+# This CITATION.cff file provides information used to cite this lesson.
+# Visit https://citation-file-format.github.io/ for the format reference,
+# and update the author list and other fields as the lesson develops.
+
+cff-version: 1.2.0
+title: 'Writing Reconstruction Algorithms in EICrecon (ePIC tutorial)'
+message: >-
+  Please cite this lesson using the information in this file
+  when you refer to it in publications, and/or if you
+  re-use, adapt, or expand on the content in your own
+  training material.
+type: dataset
+authors:
+  - given-names: Tyler
+    family-names: Kutz
+  - name: The ePIC Collaboration
+abstract: >-
+  An ePIC tutorial on implementing reconstruction algorithms in EICrecon. It
+  covers JANA2 factories, the JOmniFactory interface, parameterizing factories,
+  writing framework-independent algorithms, and working with PODIO collections,
+  culminating in a working electron-finder. Built with The Carpentries Workbench.
+keywords:
+  - EIC
+  - ePIC
+  - EICrecon
+  - reconstruction
+  - JANA2
+  - JOmniFactory
+  - PODIO
+  - edm4eic
+repository-code: 'https://github.com/eic/tutorial-reconstruction-algorithms'
+license: CC-BY-4.0
