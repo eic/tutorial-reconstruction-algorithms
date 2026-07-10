@@ -1,0 +1,78 @@
+#------------------------------------------------------------
+# Values for this lesson.
+#------------------------------------------------------------
+
+# Which carpentry is this (swc, dc, lc, or cp)?
+# swc: Software Carpentry
+# dc: Data Carpentry
+# lc: Library Carpentry
+# cp: Carpentries (to use for instructor training for instance)
+# incubator: The Carpentries Incubator
+#
+# This option supports custom types so lessons can be branded
+# and themed with your own logo and alt-text (see `carpentry_description`)
+# See https://carpentries.github.io/sandpaper-docs/editing.html#adding-a-custom-logo
+carpentry: 'incubator'
+
+# Alt-text description of the lesson.
+carpentry_description: 'EIC Tutorials'
+
+# Overall title for pages.
+title: 'Writing Reconstruction Algorithms in EICrecon'
+
+# Date the lesson was created (YYYY-MM-DD, this is empty by default)
+created: 2021-01-01
+
+# Comma-separated list of keywords for the lesson
+keywords: 'EIC, ePIC, EICrecon, reconstruction, algorithm, factory, JANA2, JOmniFactory, PODIO, edm4eic'
+
+# Life cycle stage of the lesson
+# possible values: pre-alpha, alpha, beta, stable
+life_cycle: 'stable'
+
+# License of the lesson
+license: 'CC-BY 4.0'
+
+# Link to the source repository for this lesson
+source: 'https://github.com/eic/tutorial-reconstruction-algorithms'
+
+# Default branch of your lesson
+branch: 'main'
+
+# Who to contact if there are any issues
+contact: 'team@carpentries.org'
+
+# Navigation ------------------------------------------------
+#
+# Use the following menu items to specify the order of
+# individual pages in each dropdown section. Leave blank to
+# include all pages in the folder.
+
+# Order of episodes in your lesson
+episodes:
+- 01-introduction.md
+- 02-creating-a-factory.md
+- 03-calling-a-factory.md
+- 04-parameterizing-a-factory.md
+- 05-adding-an-algorithm.md
+- 06-working-with-podio.md
+- 07-putting-everything-together.md
+
+# Information for Learners
+learners:
+- setup.md
+- reference.md
+- discuss.md
+
+# Information for Instructors
+instructors:
+- instructor-notes.md
+
+# Learner Profiles
+profiles:
+- learner-profiles.md
+
+# Customisation ---------------------------------------------
+#
+# This space below is where custom yaml items (e.g. pinning
+# sandpaper and varnish versions) should live
