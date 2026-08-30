@@ -226,18 +226,18 @@ void ElectronReconstruction::process(const Input& input, const Output& output) c
 
 ```
 
-Compared to the truth-association-based draft from earlier in the tutorial, this version is much shorter because:
+Compared to the truth-link-based draft from earlier in the tutorial, this version is much shorter because:
 
 - The track ↔ cluster matching has already been done upstream and is exposed via `ReconstructedParticle::getClusters()`.
-- We don't need any `MCRecoParticleAssociation` or `MCRecoClusterParticleAssociation` collections — the only input is the merged `ReconstructedParticles`.
+- We don't need any `MCRecoParticleLink` or `MCRecoClusterParticleLink` collections — the only input is the merged `ReconstructedParticles`.
 - We don't allocate new particles; we just keep references to the originals via a *subset* collection (`setSubsetCollection()`).
 
-The exercise from earlier episodes — wiring a custom variant that takes truth associations as additional inputs — is still a useful one. Compare your version with the version on `main` to see the trade-offs between richness of inputs and code simplicity.
+The exercise from earlier episodes — wiring a custom variant that takes truth links as additional inputs — is still a useful one. Compare your version with the version on `main` to see the trade-offs between richness of inputs and code simplicity.
 
 ::::::::::::::::::::::::::::::::::::::::::::: keypoints
 
 - The final electron finder is one factory (`ReconstructedElectrons_factory`), one algorithm (`ElectronReconstruction`), and a Config struct, wired up in `src/global/reco/reco.cc`.
-- Reading the pre-merged `ReconstructedParticles` (with its `getClusters()` relation) makes the algorithm short — no truth-association inputs are needed.
+- Reading the pre-merged `ReconstructedParticles` (with its `getClusters()` relation) makes the algorithm short — no truth-link inputs are needed.
 - The output is a subset collection of selected electrons; register additional generator instances (e.g. `ReconstructedElectronsForDIS`) for different E/p windows.
 - Omit `ChangeRun()` when a factory has no run-dependent state; the base class provides a no-op default.
 
