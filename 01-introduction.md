@@ -58,7 +58,7 @@ This simple electron ID algorithm requires three pieces of information, which wi
 
 Matching between tracks and clusters can be obtained from truth information, or from track projections.  
 
-- In the former case, the reconstructed tracks and clusters are matched through their association to the same MC particle.  
+- In the former case, the reconstructed tracks and clusters are matched through their link to the same MC particle.  
 - In the latter case, a matching criteria is applied to the position of the calorimeter cluster and the projected position of the track at the calorimeter.  
 For the purposes of this tutorial, we will use truth matching.
 
@@ -66,8 +66,8 @@ The input and output objects of our factory should be stored as PODIO collection
 
 - Reconstructed tracks are stored as a collection of `edm4eic::ReconstructedParticle`
 - Calorimeter clusters are stored as a collection of `edm4eic::Cluster`
-- Associations between reconstructed tracks and MC particles are stored as a collection of `edm4eic::MCRecoParticleAssociation`
-- Associations between calorimeter clusters and MC particles are stored as a collection of `edm4eic:MCRecoClusterParticleAssociation`
+- Links between reconstructed tracks and MC particles are stored as a collection of `edm4eic::MCRecoParticleLink`
+- Links between calorimeter clusters and MC particles are stored as a collection of `edm4eic::MCRecoClusterParticleLink`
 
 The members of each of these data types can be found in `edm4eic.yaml` in the `EDM4eic` repository.
 

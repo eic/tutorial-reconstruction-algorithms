@@ -83,7 +83,7 @@ hits->push_back(hit);
 MutableExampleCluster cluster;
 cluster.addHits(hit);
 
-// Safety tip: Add object to a collection BEFORE creating an association to it
+// Safety tip: Add object to a collection BEFORE creating a link/reference to it
 
 auto clusters = std::make_unique<ExampleClusterCollection>();
 clusters->push_back(cluster);
